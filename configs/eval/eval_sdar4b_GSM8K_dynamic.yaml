@@ -1,0 +1,30 @@
+# SDAR-4B-Chat base eval — GSM8K / dynamic  (len=256). Run: python eval.py config=configs/eval_sdar4b_GSM8K_dynamic.yaml
+experiment:
+    project: "eval_sdar4b_GSM8K_dynamic"          # MUST equal this filename (eval.py rebuilds the config path from it)
+    num_node: 1
+    node_index: 0
+
+model: "JetLM/SDAR-4B-Chat"
+model_base: "sdar"
+
+dataset:
+    eval_dataset: "GSM8K"
+    data_type: "math"
+
+execute:
+    num_chunk: 128
+
+rollout:
+    tensor_parallel_size: 1
+    max_active: 256
+    num_response_per_task: 3      # samples/question; avg-accuracy averages over all of them
+    temperature: 1.0
+    max_token: 256                   # len = 256
+    block_size: 16
+    denoising_steps_per_block: 16
+    top_p: 1.0
+    top_k: 0                      # 0 = sampling (dynamic) ; 1 = greedy (static)
+    remasking_strategy: "low_confidence_dynamic"
+    dynamic_threshold: 0.9
+    start_with_think: False
+    output_unmasking_history: False

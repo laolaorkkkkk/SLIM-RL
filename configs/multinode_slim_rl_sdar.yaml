@@ -1,0 +1,116 @@
+wandb:
+  entity: "YOUR_WANDB_ENTITY"
+  resume: "auto"
+  run_id: "slim_rl_sdar"   # distinct from the single-node run_id; change per run
+  project: "slim-rl-sdar"
+  run_name: "${training.method}_in_${model.model_base}_${rollout.max_token}_bs${rollout.block_size}_${rollout.remasking_strategy}_kl_${training.beta}_${training.kl_estimator}_beta_n${rollout.num_response_per_task}_${training.normalize_method}_nq${training.num_quadrature_points}_lm${training.batch_size_lm}_grad${training.gradient_accumulation_steps}_${training.importance_sampling_level}_cl${training.clip_ratio_low}-${training.clip_ratio_high}_2node8gpu_eval_${evaluation.num_response_per_task}"
+
+system:
+  HTTP_PROXY: null
+  HF_HOME: "/path/to/hf_home"
+  env_name: "dllm-rl"
+  envs_dir: "/path/to/envs"
+  base_dir: "/path/to/dllm"
+
+experiment:
+  project: "multinode_slim_rl_sdar" # need to be same of this file name
+  function: "train"
+  start_from_scratch: True   
+  total_step: 160
+  save_every: 10
+  eval_every: 10
+  current_epoch: 1   
+  deepspeed_file: "2_node_8_gpus_deepspeed_zero3" # match num_node below
+  num_node: 2
+  node_index: 0
+
+model:
+  pretrained_model: "JetLM/SDAR-4B-Chat" # absolute path
+  optimized_name: "optimized"
+  model_base: "slim_rl_sdar"   
+
+dataset:
+  train_dataset: "MATH_train"
+  optimization_data: "rl_data"
+  data_type: "math"
+
+rollout:
+  tensor_parallel_size: 1
+  max_active: 256
+  num_task_per_step: 128
+  num_response_per_task: 8
+  temperature: 1.0
+  max_token: 256
+  block_size: 16
+  denoising_steps_per_block: 16
+  top_p: 1.0
+  top_k: 0
+  remasking_strategy: "tau_budget_dynamic"
+  dynamic_threshold: 0.9
+  tau_budget_m: 1  # uncertainty budget multiplier; budget = m * (1-tau)
+  start_with_think: False
+
+execute:
+  num_chunk: 128
+
+training:
+  gradient_checkpointing_enable: True
+  gradient_accumulation_steps: 1   
+  batch_size_lm: 8   
+  mixed_precision: "bf16"
+  enable_tf32: True
+  seed: 10086
+  num_train_epochs: 1
+  max_grad_norm: 1.0
+  method: "slim_rl"
+  normalize_method: "dr_grpo"  # reward normalization: "z_score" (default) or "dr_grpo"
+  num_quadrature_points: 3
+  block_size: 16
+  shrink: 4
+  mask_increasing: False   # True: per-block mask prob INCREASES across blocks (block0 masked least, last block most). False(default) flips it to decreasing.
+  post_num: 0
+  max_gen_length: 256
+  max_prompt_len: 784
+  lower_p: 0.1
+  upper_p: 0.9
+  importance_sampling_level: "sequence"  # "token" (default, per-token ratio) or "block" (block-averaged ratio)
+  eps: 0.20
+  clip_ratio_low: 0.1 # 0.0003 0.2 0.1
+  clip_ratio_high: 0.1 # 0.0004 0.11
+  beta: 0.01
+  kl_estimator: "k3" 
+
+optimizer:
+  name: adamw
+  params:
+    learning_rate: 1e-6
+    scale_lr: False
+    beta1: 0.9
+    beta2: 0.999
+    weight_decay: 0.0
+    epsilon: 1e-8
+
+lr_scheduler:
+  scheduler: "cosine"
+  params:
+    learning_rate: ${optimizer.params.learning_rate}
+    warmup_steps: 0
+    min_lr_scale: 1.0
+
+evaluation:
+  eval_dataset: "MATH500"
+  data_type: "math"
+  tensor_parallel_size: 1
+  max_active: 256
+  num_response_per_task: 9
+  temperature: 1.0
+  max_token: 256
+  block_size: 16
+  denoising_steps_per_block: 16
+  top_p: 1.0
+  top_k: [0, 0]  
+  remasking_strategy: ["tau_budget_dynamic", "low_confidence_dynamic"]
+  dynamic_threshold: 0.9
+  tau_budget_m: 1
+  start_with_think: False
+# len(top_k) must == len(remasking_strategy)

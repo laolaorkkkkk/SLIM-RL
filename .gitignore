@@ -1,0 +1,39 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / OS / tooling
+.idea/
+.vscode/
+.DS_Store
+.claude/
+
+# Logs and experiment outputs (regenerated at run time)
+*.log
+wandb/
+runs/
+outputs/
+logs/
+/eval_runs/
+/eval_*/
+/multinode_slim_rl_*/
+
+# Downloaded datasets (run data/download_data.py); the scripts under data/ are kept
+/data/*/
+
+# Model weights / checkpoints (download separately)
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+ckpt/
+*-Chat/
